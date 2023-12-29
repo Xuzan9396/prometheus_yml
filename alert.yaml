@@ -1,0 +1,108 @@
+groups:
+  - name: Prometheus alert
+    rules:
+      # 对任何实例超过30s无法联系的情况发出警报
+      - alert: 服务是否down机
+        expr: up == 0
+        for: 30s
+        labels:
+          severity: 'critical'
+          webhook: 'server'
+        annotations:
+          instance: "{{ $labels.instance }}"
+          description: "{{ $labels.job }} 服务down机了,紧急查看"
+
+      # 内存使用率超过 95% 的告警
+      - alert: 内存使用情况95%
+        expr: |
+          (node_memory_MemTotal_bytes{job="localnews_node正式服"} - node_memory_MemAvailable_bytes{job="localnews_node正式服"}) / node_memory_MemTotal_bytes{job="localnews_node正式服"} * 100 > 95
+        for: 30s
+        labels:
+          severity: 'warning'
+        annotations:
+          instance: "{{ $labels.instance }}"
+          description: "内存使用率超过 95%，当前值：{{ $value }}%"
+
+      - alert: 内存使用情况
+        expr: |
+          (node_memory_MemTotal_bytes{job!="localnews_node正式服"} - node_memory_MemAvailable_bytes{job!="localnews_node正式服"}) / node_memory_MemTotal_bytes{job!="localnews_node正式服"} * 100 > 80
+        for: 30s
+        labels:
+          severity: 'warning'
+        annotations:
+          instance: "{{ $labels.instance }}"
+          description: "内存使用率超过 80%，当前值：{{ $value }}%"
+
+
+      # CPU 使用率超过 80% 的告警
+      - alert: cpu使用情况
+        expr: 100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          instance: "{{ $labels.instance }}"
+          description: "CPU 使用率超过 80%，当前值：{{ $value }}%"
+
+      # 磁盘使用率超过 80% 的告警
+      - alert: 磁盘使用情况
+        expr: (node_filesystem_size_bytes - node_filesystem_free_bytes) / node_filesystem_size_bytes * 100 > 80
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          instance: "{{ $labels.instance }}"
+          description: "磁盘使用率超过 80%，当前值：{{ $value }}%"
+
+          # 负载过高
+      - alert: 负载过高
+        expr: node_load1 >= count(node_cpu_seconds_total{mode="idle"}) BY (instance)
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          instance: "{{ $labels.instance }}"
+          description: "负载太高了，当前值：{{ $value }}%"
+      - alert: 域名报警10天过期
+        expr: probe_ssl_earliest_cert_expiry - time() < 86400 * 10
+        for: 30m
+        labels:
+          severity: domin
+        annotations:
+          summary: 域名证书即将过期 (instance {{ $labels.instance }})
+          description: "域名证书10天后过期n VALUE = {{ $value }}n  LABELS = {{ $labels }}"
+      - alert: 域名报警三天过期
+        expr: probe_ssl_earliest_cert_expiry - time() < 86400 * 3
+        for: 30m
+        labels:
+          severity: domin
+        annotations:
+          summary: 域名证书即将过期 (instance {{ $labels.instance }})
+          description: "域名证书3天后过期n VALUE = {{ $value }}n  LABELS = {{ $labels }}"
+      - alert: 域名不可用了,紧急
+        expr: probe_ssl_earliest_cert_expiry <= 0
+        for: 1m
+        labels:
+          severity: domin
+        annotations:
+          summary: 域名证书不可用了 (instance {{ $labels.instance }})
+          description: "域名证书不可用了 VALUE = {{ $value }}n  LABELS = {{ $labels }}"
+
+
+      - alert: 域名不可用了
+        expr: probe_http_status_code <= 0
+        for: 1m
+        labels:
+          severity: domin
+        annotations:
+          summary: 域名证书不可用了 (instance {{ $labels.instance }})
+          description: "域名证书不可用了 VALUE = {{ $value }}n  LABELS = {{ $labels }}"
+
+#      - alert: 程序挂掉了(紧急查看)
+#        expr: myapp_up == 1
+#        for: 30s
+#        labels:
+#          severity: warning
+#        annotations:
+#          summary: "程序掉了 down,超过了30s了"
+#          description: "instance {{ $labels.instance }} with job {{ $labels.job }}"

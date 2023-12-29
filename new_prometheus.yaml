@@ -1,0 +1,84 @@
+global:
+  scrape_interval: 30s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+  evaluation_interval: 30s # Evaluate rules every 15 seconds. The default is every 1 minute.
+
+# 其他全局配置...
+
+scrape_configs:
+  # Prometheus 自身的监控配置
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9070"]
+
+  - job_name: 'node_widgets'
+    scheme: https  # 使用 HTTPS
+    tls_config:
+      insecure_skip_verify: true  # 忽略证书验证
+    static_configs:
+      - targets: ['widgets-user.atlaszz.com:443']  # 替换为您的服务器 B 地址和端口
+    metrics_path: '/prometheus/metrics'  # Node Exporter 的路径
+
+  - job_name: 'widgets正式服'
+    scheme: https  # 使用 HTTPS
+    tls_config:
+      insecure_skip_verify: true  # 忽略证书验证
+    static_configs:
+      - targets: ['widgets-user.atlaszz.com:443']  # 替换为您的服务器 B 地址和端口
+    metrics_path: '/v1/app/metrics'  # Node Exporter 的路径
+
+  - job_name: 'widgets测式服'
+    scheme: http  # 使用 HTTPS
+    static_configs:
+      - targets: ['3.83.73.247:8063']  # 替换为您的服务器 B 地址和端口
+    metrics_path: '/v1/app/metrics'  # Node Exporter 的路径
+
+  - job_name: 'localnews_node正式服'
+    scheme: https  # 使用 HTTPS
+    tls_config:
+      insecure_skip_verify: true  # 忽略证书验证
+    static_configs:
+      - targets: ['newsapi.zankhana.ltd:443']  # 替换为您的服务器 B 地址和端口
+    metrics_path: '/prometheus/metrics'  # Node Exporter 的路径
+
+  - job_name: 'blackbox'
+    scrape_interval: 1m
+    metrics_path: /probe
+    params:
+      module: [https_2xx]  # 使用之前定义的 https_2xx 模块
+    static_configs:
+      - targets:
+          - https://widgetsapi.gitxuzan.top  # 要监控的目标 HTTPS 网址
+          - https://weatherapi.gitxuzan.top
+          - https://newsapi.zankhana.ltd
+          - https://widgets-user.atlaszz.com
+          - https://widgets.zankhana.ltd # 天气local news
+          - https://newsasset.zankhana.ltd # oss local news
+          - https://widgets.atlaszz.com
+          - https://resource.atlaszz.com
+          - https://widgets-aaset.atlaszz.com
+          - https://st.atlaszz.com
+          - https://atlaszz.com
+          - https://weather.zankhana.ltd/v1/app/test
+
+
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9073  # Blackbox Exporter 的地址
+
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - localhost:9071
+
+# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+rule_files:
+  - "alert.yml"
+    # 测试的
+  #- "test_alert.yml"

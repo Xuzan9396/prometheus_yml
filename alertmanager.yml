@@ -1,0 +1,50 @@
+global:
+  # 全局配置
+  smtp_smarthost: 'smtp.gmail.com:587'  # 指定SMTP服务器和端口，这里使用的是Gmail的SMTP服务器和587端口
+  smtp_from: 'xuzan@'          # 发送告警邮件时使用的发件人邮箱地址
+  smtp_auth_username: 'xuzan@' # SMTP认证时使用的用户名，这里是邮箱地址
+  smtp_auth_password: 'ohcz' # SMTP认证时使用的密码
+
+route:
+  # 路由配置
+  group_by: ['critical','warning']   # 告警分组依据，这里按照 'server_alert' 标签分组
+  group_wait: 30s              # 分组后等待30秒，如果这段时间内有新的相同分组的告警则一起发送
+  group_interval: 5m           # 分组告警发送间隔，即每5分钟发送一次同一组的告警
+  repeat_interval: 1h          # 重复告警发送间隔，即相同的告警每小时重复发送一次
+  receiver: 'email-notifications' # 默认接收器，用于处理没有匹配特定路由的告警
+  routes:
+    - match:
+        severity: 'warning'     # 匹配规则，当告警级别为warning时
+      receiver: 'email-notifications' # 使用此接收器处理告警
+      group_by: ['warning']     # 告警分组依据，这里按照 'warning' 标签分组
+      continue: true  # 允许告警继续匹配后续路由
+    - match:
+        severity: 'domin'     # 匹配规则，当告警级别为warning时
+      receiver: 'email-notifications' # 使用此接收器处理告警
+      group_by: ['domin']     # 告警分组依据，这里按照 'warning' 标签分组
+      continue: true  # 允许告警继续匹配后续路由
+    - match:
+        webhook: 'server'
+      receiver: 'webhook-server-restart'
+      group_by: [ 'server_restart' ] # 这里按 job 和 instance 分组
+      group_wait: 0s           # 分组后等待10秒，如果这段时间内有新的相同分组的告警则一起发送
+      group_interval: 2m           # 分组告警发送间隔，即每5分钟发送一次同一组的告警
+      repeat_interval: 1h          # 重复告警发送间隔，即相同的告警每小时重复发送一次
+      continue: true  # 允许告警继续匹配后续路由
+    - match:
+        severity: 'critical'    # 匹配规则，当告警级别为critical时
+      receiver: 'email-notifications' # 使用此接收器处理告警
+      group_by: ['critical']    # 告警分组依据，这里按照 'critical' 标签分组
+      group_wait: 4s           # 分组后等待10秒，如果这段时间内有新的相同分组的告警则一起发送
+      group_interval: 2m           # 分组告警发送间隔，即每5分钟发送一次同一组的告警
+      continue: true  # 允许告警继续匹配后续路由
+receivers:
+  # 接收器定义
+  - name: 'email-notifications'     # 接收器名称
+    email_configs:
+      - to: 'xuzan@lippu.ltd'       # 告警接收的邮箱地址
+        send_resolved: true         # 告警解决后是否发送通知
+  - name: 'webhook-server-restart'
+    webhook_configs:
+      - url: 'http://webhook URL'  # 替换为你的webhook URL
+        send_resolved: false
