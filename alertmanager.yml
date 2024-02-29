@@ -22,6 +22,7 @@ route:
         severity: 'domin'     # 匹配规则，当告警级别为warning时
       receiver: 'email-notifications' # 使用此接收器处理告警
       group_by: ['domin']     # 告警分组依据，这里按照 'warning' 标签分组
+      repeat_interval: 24h # 每24个小时提示一次
       continue: true  # 允许告警继续匹配后续路由
     - match:
         webhook: 'server'
